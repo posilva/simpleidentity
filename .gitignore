@@ -1,0 +1,16 @@
+*.o
+*.so
+*.exe
+*.dll
+*.test
+*.out
+vendor/
+bin/
+coverage.out
+*.log
+*.tmp
+*.swp
+.idea/
+.vscode/
+.DS_Store
+.env
