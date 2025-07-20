@@ -1,5 +1,5 @@
-// Package dynamodb provides an adapter for DynamoDB output operations implements the AccountsRepository interface.
-package dynamodb
+// Package repository provides an adapter for DynamoDB output operations implements the AccountsRepository interface.
+package repository
 
 import (
 	"context"
@@ -56,16 +56,17 @@ type dynamoDBAccountsRepository struct {
 var _ ports.AccountsRepository = (*dynamoDBAccountsRepository)(nil)
 
 // NewDynamoDBAccountsRepositoryWithIDGenerator creates a new instance of DynamoDBAccountsRepository with a custom ID generator.
-func NewDynamoDBAccountsRepositoryWithIDGenerator(idGenerator ports.IDGenerator, client DynamoDBAPI) *dynamoDBAccountsRepository {
+func NewDynamoDBAccountsRepositoryWithIDGenerator(client DynamoDBAPI, tableName string, idGenerator ports.IDGenerator) ports.AccountsRepository {
 	return &dynamoDBAccountsRepository{
+		tableName:   tableName,
 		idGenerator: idGenerator,
 		client:      client,
 	}
 }
 
 // NewDynamoDBAccountsRepository creates a new instance of DynamoDBAccountsRepository.
-func NewDynamoDBAccountsRepository(client DynamoDBAPI) *dynamoDBAccountsRepository {
-	return NewDynamoDBAccountsRepositoryWithIDGenerator(idgen.NewKSUIDGenerator(), client)
+func NewDynamoDBAccountsRepository(client DynamoDBAPI, tableName string) ports.AccountsRepository {
+	return NewDynamoDBAccountsRepositoryWithIDGenerator(client, tableName, idgen.NewKSUIDGenerator())
 }
 
 // ResolveIDByProvider resolves the account ID by provider type and provider ID.
@@ -97,7 +98,6 @@ func (r *dynamoDBAccountsRepository) ResolveIDByProvider(ctx context.Context, pr
 	if err != nil {
 		return domain.EmptyAccountID, fmt.Errorf("failed to query DynamoDB: %w", err)
 	}
-
 	if len(result.Items) == 0 {
 		return domain.EmptyAccountID, domain.ErrAccountNotFound
 	}
