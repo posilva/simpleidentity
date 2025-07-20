@@ -6,6 +6,11 @@ import (
 	"github.com/posilva/account-service/internal/core/domain"
 )
 
+// AuthService defines the interface for authentication services.
+type AuthService interface {
+	Authenticate(context.Context, domain.AuthenticateInput) (*domain.AuthenticateOutput, error)
+}
+
 // AuthResult defines the interface for providers authentication results.
 type AuthResult interface {
 	GetID() string
@@ -21,4 +26,15 @@ type AuthProviderFactory interface {
 	Get(providerType domain.ProviderType) (AuthProvider, error)
 	Add(providerType domain.ProviderType, provider AuthProvider) error
 	Remove(providerType domain.ProviderType) error
+}
+
+// AccountsRepository defines the interface for account repository operations.
+type AccountsRepository interface {
+	ResolveIDByProvider(context.Context, domain.ProviderType, string) (domain.AccountID, error)
+	Create(context.Context, domain.ProviderType, string) (domain.AccountID, error)
+}
+
+// IDGenerator defines the interface for generating unique account IDs.
+type IDGenerator interface {
+	GenerateID() string
 }
