@@ -16,13 +16,11 @@ func NewDefaultFactory() ports.AuthProviderFactory {
 	}
 }
 
-// Add implements ports.AuthProviderFactory.
 func (d *defaultFactory) Add(providerType domain.ProviderType, provider ports.AuthProvider) error {
 	d.registry[providerType] = provider
 	return nil
 }
 
-// Get implements ports.AuthProviderFactory.
 func (d *defaultFactory) Get(providerType domain.ProviderType) (ports.AuthProvider, error) {
 	if provider, exists := d.registry[providerType]; exists {
 		return provider, nil
@@ -30,7 +28,7 @@ func (d *defaultFactory) Get(providerType domain.ProviderType) (ports.AuthProvid
 	return nil, domain.ErrProviderNotFound
 }
 
-// Remove implements ports.AuthProviderFactory.
 func (d *defaultFactory) Remove(providerType domain.ProviderType) error {
-	panic("unimplemented")
+	delete(d.registry, providerType)
+	return nil
 }

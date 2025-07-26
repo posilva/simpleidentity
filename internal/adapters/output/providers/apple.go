@@ -12,6 +12,10 @@ type appleAuthResult struct {
 	ID string
 }
 
+func NewAppleProvider() *AppleProvider {
+	return &AppleProvider{}
+}
+
 func (r *appleAuthResult) GetID() string {
 	return r.ID
 }

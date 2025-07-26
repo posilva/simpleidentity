@@ -96,6 +96,7 @@ func setupDynamoDBContainer(t *testing.T) (*dynamodb.Client, func()) {
 
 	cfg, err := config.LoadDefaultConfig(ctx,
 		config.WithRegion("us-east-1"),
+		//nolint:staticcheck // SA1019
 		config.WithEndpointResolverWithOptions(aws.EndpointResolverWithOptionsFunc(
 			func(service, region string, options ...interface{}) (aws.Endpoint, error) {
 				return aws.Endpoint{
@@ -146,32 +147,6 @@ func createTestTable(t *testing.T, client *dynamodb.Client, tableName string) {
 			{
 				AttributeName: aws.String("SK"),
 				AttributeType: types.ScalarAttributeTypeS,
-			},
-			{
-				AttributeName: aws.String("GSI1PK"),
-				AttributeType: types.ScalarAttributeTypeS,
-			},
-			{
-				AttributeName: aws.String("GSI1SK"),
-				AttributeType: types.ScalarAttributeTypeS,
-			},
-		},
-		GlobalSecondaryIndexes: []types.GlobalSecondaryIndex{
-			{
-				IndexName: aws.String("GSI1"),
-				KeySchema: []types.KeySchemaElement{
-					{
-						AttributeName: aws.String("GSI1PK"),
-						KeyType:       types.KeyTypeHash,
-					},
-					{
-						AttributeName: aws.String("GSI1SK"),
-						KeyType:       types.KeyTypeRange,
-					},
-				},
-				Projection: &types.Projection{
-					ProjectionType: types.ProjectionTypeAll, // or ProjectionTypeKeysOnly, ProjectionTypeInclude
-				},
 			},
 		},
 		BillingMode: types.BillingModePayPerRequest,

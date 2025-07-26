@@ -1,3 +1,4 @@
+// Package ports contains interfaces for core domain entities.
 package ports
 
 import (

@@ -13,7 +13,7 @@ deps:
 	go mod tidy 
 
 lint: fmt
-	golangci-lint
+	golangci-lint run
 
 
 test: testi testu  
@@ -23,4 +23,4 @@ fmt:
 
 
 check: fmt lint testi testu 
-	
+	:
