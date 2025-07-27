@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/posilva/account-service/internal/adapters/output/providers/certs"
 	"github.com/posilva/account-service/internal/core/domain"
 	"github.com/posilva/account-service/internal/core/ports"
 )
@@ -43,7 +44,7 @@ type idTokenClaims struct {
 
 type tokenResponse struct {
 	AccessToken  string `json:"access_token"`
-	ExpiresIn    int    `json:"expires_in"`
+	ExpiresIn    int64  `json:"expires_in"`
 	RefreshToken string `json:"refresh_token"`
 	Scope        string `json:"scope"`
 	TokenType    string `json:"token_type"`
@@ -61,6 +62,16 @@ type GoogleCredentialsProvider interface {
 	GetIDExpectedAud() string
 }
 
+type googleProvider struct {
+	requestTimeout      time.Duration
+	credentialsProvider GoogleCredentialsProvider
+	cacheManager        certs.CacheManager
+}
+
+type googleAuthResult struct {
+	ID string
+}
+
 type GoogleProviderOption func(*googleProvider)
 
 func WithTimeout(timeout time.Duration) GoogleProviderOption {
@@ -69,13 +80,10 @@ func WithTimeout(timeout time.Duration) GoogleProviderOption {
 	}
 }
 
-type googleProvider struct {
-	requestTimeout      time.Duration
-	credentialsProvider GoogleCredentialsProvider
-}
-
-type googleAuthResult struct {
-	ID string
+func WithCertificatesCacheManager(cm certs.CacheManager) GoogleProviderOption {
+	return func(p *googleProvider) {
+		p.cacheManager = cm
+	}
 }
 
 func (r *googleAuthResult) GetID() string {
@@ -88,6 +96,7 @@ func NewGoogleProvider(credentialsProvider GoogleCredentialsProvider, opts ...Go
 	svc := &googleProvider{
 		requestTimeout:      defaultTimeout,
 		credentialsProvider: credentialsProvider,
+		cacheManager:        certs.NewGoogleCacheManager(),
 	}
 	for _, opt := range opts {
 		opt(svc)
@@ -145,29 +154,45 @@ func (p *googleProvider) exchangeAuthCode(authCode string) (*tokenResponse, erro
 	return &tokenResp, nil
 }
 
-// getGooglePublicKeys fetches Google's public certs (PEM format)
-func (p *googleProvider) getGooglePublicKeys() (map[string]*rsa.PublicKey, error) {
-	// TODO: this will me implemented by a CertificateCache abstraction to avoid all these fetches
-	resp, err := http.Get(p.credentialsProvider.GetCertsURL())
-	if err != nil {
-		return nil, err
-	}
-	defer func() {
-		_ = resp.Body.Close()
-	}()
+// fetchPublicKeyById fetches Google's public certs (PEM format)
+func (p *googleProvider) fetchPublicKeyByID(id string) (*rsa.PublicKey, error) {
+	key := p.cacheManager.Get(id)
+	if key == nil {
+		resp, err := http.Get(p.credentialsProvider.GetCertsURL())
+		if err != nil {
+			return nil, err
+		}
+		defer func() {
+			_ = resp.Body.Close()
+		}()
 
-	certs := map[string]string{}
-	if err := json.NewDecoder(resp.Body).Decode(&certs); err != nil {
-		return nil, err
-	}
+		expiresHeader := resp.Header.Get("Expires")
+		expiresAt, err := time.Parse(time.RFC1123, expiresHeader)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse expires header: %w", err)
+		}
 
-	keys := map[string]*rsa.PublicKey{}
-	for kid, certPEM := range certs {
-		block, _ := jwt.ParseRSAPublicKeyFromPEM([]byte(certPEM))
-		keys[kid] = block
-	}
+		certs := map[string]string{}
+		if err := json.NewDecoder(resp.Body).Decode(&certs); err != nil {
+			return nil, err
+		}
 
-	return keys, nil
+		keys := map[string]*rsa.PublicKey{}
+		for kid, certPEM := range certs {
+			block, _ := jwt.ParseRSAPublicKeyFromPEM([]byte(certPEM))
+			keys[kid] = block
+		}
+
+		for i, k := range keys {
+			_ = p.cacheManager.Add(i, k, expiresAt)
+		}
+
+		key = p.cacheManager.Get(id)
+		if key == nil {
+			return nil, fmt.Errorf("public key id '%s' not found", id)
+		}
+	}
+	return key, nil
 }
 
 func (p *googleProvider) verifyIDToken(idToken string) (*idTokenClaims, error) {
@@ -177,14 +202,9 @@ func (p *googleProvider) verifyIDToken(idToken string) (*idTokenClaims, error) {
 			return nil, errors.New("no kid found in token header")
 		}
 
-		keys, err := p.getGooglePublicKeys()
+		pubKey, err := p.fetchPublicKeyByID(kid)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get public keys: %w", err)
-		}
-
-		pubKey, ok := keys[kid]
-		if !ok {
-			return nil, fmt.Errorf("public key not found for kid: %s", kid)
 		}
 
 		return pubKey, nil

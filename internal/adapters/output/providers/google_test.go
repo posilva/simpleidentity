@@ -15,6 +15,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/ovechkin-dm/mockio/v2/matchers"
 	"github.com/ovechkin-dm/mockio/v2/mock"
+	"github.com/posilva/account-service/internal/adapters/output/providers/certs"
 	"github.com/stretchr/testify/require"
 )
 
@@ -31,51 +32,6 @@ var (
 	privateKey       *rsa.PrivateKey
 )
 
-func generateIDToken() string {
-	claims := jwt.MapClaims{
-		"sub":   testSubject,
-		"exp":   time.Now().Add(time.Hour).Unix(),
-		"email": "player01@example.com",
-		"aud":   testExpectedAudience,
-		"iss":   testExpectedIssuer,
-	}
-
-	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
-	token.Header["kid"] = testKeyID
-
-	signedToken, err := token.SignedString(privateKey)
-	if err != nil {
-		panic(err)
-	}
-	return signedToken
-}
-
-func googleAuthURIHandler(w http.ResponseWriter, r *http.Request) {
-	t := tokenResponse{
-		AccessToken:  "access_token",
-		ExpiresIn:    int(time.Now().UTC().Unix() + 10),
-		RefreshToken: "refresh_token",
-		Scope:        "scope",
-		TokenType:    "token_type",
-		IDToken:      generateIDToken(),
-	}
-
-	b, _ := json.Marshal(t)
-
-	_, _ = w.Write(b)
-}
-
-func googleCertsURLHandler(w http.ResponseWriter, r *http.Request) {
-	response := map[string]interface{}{
-		testKeyID: publicKeyString,
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-
-	_ = json.NewEncoder(w).Encode(response)
-}
-
 func TestMain(t *testing.T) {
 	privateKeyString, publicKeyString, privateKey = createRSAKeys()
 }
@@ -88,21 +44,23 @@ func TestProviderGoogle_Returns_GoogleAuthResult(t *testing.T) {
 
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("/authCode", googleAuthURIHandler)
-	mux.HandleFunc("/certs", googleCertsURLHandler)
+	mux.HandleFunc("/authCode", googleAuthURIHandler(10))
+	mux.HandleFunc("/certs", googleCertsURLHandler(publicKeyString))
 
 	ts := httptest.NewServer(mux)
 	defer ts.Close()
 
 	credentialProviderMock := createCredentialProviderMock(ctrl, ts)
 
-	p := NewGoogleProvider(credentialProviderMock, WithTimeout(1*time.Second))
+	p := NewGoogleProvider(credentialProviderMock,
+		WithTimeout(1*time.Second), WithCertificatesCacheManager(certs.NewGoogleCacheManager()))
 	res, err := p.Authenticate(ctx, map[string]string{GoogleAuthCodeFieldName: token})
 	require.NoError(t, err)
 	require.NotNil(t, res)
 	require.Equal(t, res.GetID(), testSubject)
 }
 
+// ################# auxiliary function to make tests less verbose
 func createCredentialProviderMock(ctrl *matchers.MockController, ts *httptest.Server) GoogleCredentialsProvider {
 	credentialProviderMock := mock.Mock[GoogleCredentialsProvider](ctrl)
 	mock.WhenSingle(credentialProviderMock.GetAuthURI()).ThenReturn(ts.URL + "/authCode")
@@ -142,4 +100,55 @@ func createRSAKeys() (priv string, pub string, privateKey *rsa.PrivateKey) {
 	publicKeyPEM := pem.EncodeToMemory(pubBlock)
 	pub = string(publicKeyPEM)
 	return
+}
+
+func generateIDToken(secs int) string {
+	claims := jwt.MapClaims{
+		"sub":   testSubject,
+		"exp":   time.Now().Add(time.Second * time.Duration(secs)).Unix(),
+		"email": "player01@example.com",
+		"aud":   testExpectedAudience,
+		"iss":   testExpectedIssuer,
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
+	token.Header["kid"] = testKeyID
+
+	signedToken, err := token.SignedString(privateKey)
+	if err != nil {
+		panic(err)
+	}
+	return signedToken
+}
+
+func googleAuthURIHandler(secs int) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		t := tokenResponse{
+			AccessToken:  "access_token",
+			ExpiresIn:    time.Now().Add(time.Duration(secs) * time.Second).Unix(),
+			RefreshToken: "refresh_token",
+			Scope:        "scope",
+			TokenType:    "token_type",
+			IDToken:      generateIDToken(10),
+		}
+
+		b, _ := json.Marshal(t)
+
+		_, _ = w.Write(b)
+	}
+}
+
+func googleCertsURLHandler(pub string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		expires := time.Now().Add(1 * time.Hour).UTC().Format(time.RFC1123)
+
+		response := map[string]any{
+			testKeyID: publicKeyString,
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Add("expires", expires)
+		w.WriteHeader(http.StatusOK)
+
+		_ = json.NewEncoder(w).Encode(response)
+	}
 }
