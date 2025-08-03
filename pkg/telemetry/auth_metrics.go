@@ -1,5 +1,8 @@
 package telemetry
 
+import (
+	"go.opentelemetry.io/otel/metric"
+)
 
 // AuthMetrics provides authentication-specific metrics
 type AuthMetrics struct {

@@ -1,5 +1,13 @@
 package telemetry
 
+import (
+	"context"
+	"fmt"
+
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
+)
 
 // Common attribute helpers
 func UserIDAttr(userID string) attribute.KeyValue {

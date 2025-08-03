@@ -36,6 +36,7 @@ type Event interface {
 	Dur(key string, d time.Duration) Event
 	Time(key string, t time.Time) Event
 	Any(key string, i interface{}) Event
+	Interface(key string, i interface{}) Event
 	Msg(msg string)
 	Msgf(format string, v ...interface{})
 	Send()
@@ -199,6 +200,10 @@ func (e *zerologEvent) Time(key string, t time.Time) Event {
 }
 
 func (e *zerologEvent) Any(key string, i interface{}) Event {
+	return &zerologEvent{event: e.event.Interface(key, i)}
+}
+
+func (e *zerologEvent) Interface(key string, i interface{}) Event {
 	return &zerologEvent{event: e.event.Interface(key, i)}
 }
 

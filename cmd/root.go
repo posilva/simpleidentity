@@ -7,6 +7,8 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+
+	"github.com/posilva/simpleidentity/pkg/config"
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -66,8 +68,15 @@ func init() {
 
 // initConfig sets up environment variable binding for 12-factor app compliance
 func initConfig() {
+	// Initialize global configuration manager
+	configMgr := config.InitGlobal()
+	
+	// Enable automatic environment variable binding
 	viper.AutomaticEnv()
 	viper.SetEnvPrefix("SMPIDT")
 	viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
 	viper.BindPFlags(rootCmd.PersistentFlags())
+	
+	// Set defaults through the config manager
+	configMgr.SetDefaults()
 }

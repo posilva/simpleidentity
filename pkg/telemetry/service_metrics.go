@@ -1,5 +1,13 @@
-package telemetry 
+package telemetry
 
+import (
+	"context"
+	"fmt"
+	"time"
+
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
+)
 
 // Common metric instruments for services
 type ServiceMetrics struct {

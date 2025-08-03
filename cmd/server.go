@@ -9,6 +9,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
+	"github.com/posilva/simpleidentity/pkg/config"
 	"github.com/posilva/simpleidentity/pkg/health"
 	"github.com/posilva/simpleidentity/pkg/logger"
 	"github.com/posilva/simpleidentity/pkg/pprof"
@@ -73,46 +74,59 @@ func init() {
 }
 
 func runServer(cmd *cobra.Command, args []string) error {
+	// Initialize configuration manager
+	configMgr := config.NewManager()
+	
+	// Load configuration
+	cfg, err := configMgr.Load()
+	if err != nil {
+		return fmt.Errorf("failed to load configuration: %w", err)
+	}
+
 	// Initialize logger
-	logLevel := viper.GetString("log-level")
-	logPretty := viper.GetBool("log-pretty")
-	log := logger.New(logLevel, logPretty)
+	log := logger.New(cfg.LogLevel, cfg.LogPretty)
 
 	log.Info().
-		Str("version", viper.GetString("version")).
-		Str("log_level", logLevel).
+		Str("version", cfg.Version).
+		Str("log_level", cfg.LogLevel).
 		Msg("Starting SimpleIdentity server")
+
+	// Print configuration in debug mode
+	if cfg.LogLevel == "debug" {
+		configSettings := configMgr.PrintConfig(cfg)
+		log.Debug().
+			Any("config", configSettings).
+			Msg("Loaded configuration")
+	}
 
 	// Create contexts
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	// Initialize shutdown manager
-	shutdownTimeout := viper.GetDuration("shutdown-timeout")
-	shutdownMgr := shutdown.NewManager(shutdownTimeout, log)
+	shutdownMgr := shutdown.NewManager(cfg.ShutdownTimeout, log)
 
 	// Initialize OpenTelemetry if enabled
 	var telemetryProvider *telemetry.Provider
-	if viper.GetBool("telemetry-enabled") {
+	if cfg.TelemetryEnabled {
 		telemetryConfig := telemetry.Config{
 			ServiceName:       "simpleidentity",
-			ServiceVersion:    viper.GetString("version"),
-			Environment:       viper.GetString("telemetry-environment"),
-			TracingEnabled:    viper.GetBool("tracing-enabled"),
-			TracingEndpoint:   viper.GetString("tracing-endpoint"),
-			TracingProtocol:   viper.GetString("tracing-protocol"),
-			TracingSampler:    viper.GetString("tracing-sampler"),
-			TracingSampleRate: viper.GetFloat64("tracing-sample-rate"),
-			MetricsEnabled:    viper.GetBool("metrics-enabled"),
-			MetricsEndpoint:   viper.GetString("metrics-endpoint"),
-			MetricsProtocol:   viper.GetString("metrics-protocol"),
-			MetricsInterval:   viper.GetDuration("metrics-interval"),
-			Insecure:          viper.GetBool("otlp-insecure"),
-			Timeout:           viper.GetDuration("otlp-timeout"),
-			Compression:       viper.GetString("otlp-compression"),
+			ServiceVersion:    cfg.Version,
+			Environment:       cfg.TelemetryEnvironment,
+			TracingEnabled:    cfg.TracingEnabled,
+			TracingEndpoint:   cfg.TracingEndpoint,
+			TracingProtocol:   cfg.TracingProtocol,
+			TracingSampler:    cfg.TracingSampler,
+			TracingSampleRate: cfg.TracingSampleRate,
+			MetricsEnabled:    cfg.MetricsEnabled,
+			MetricsEndpoint:   cfg.MetricsEndpoint,
+			MetricsProtocol:   cfg.MetricsProtocol,
+			MetricsInterval:   cfg.MetricsInterval,
+			Insecure:          cfg.OtlpInsecure,
+			Timeout:           cfg.OtlpTimeout,
+			Compression:       cfg.OtlpCompression,
 		}
 
-		var err error
 		telemetryProvider, err = telemetry.NewProvider(telemetryConfig, log)
 		if err != nil {
 			return fmt.Errorf("failed to initialize telemetry: %w", err)
@@ -123,8 +137,7 @@ func runServer(cmd *cobra.Command, args []string) error {
 	}
 
 	// Initialize health checker
-	version := viper.GetString("version")
-	healthChecker := health.NewChecker(log, version)
+	healthChecker := health.NewChecker(log, cfg.Version)
 
 	// Add basic health checks
 	healthChecker.AddCheck("self", func(ctx context.Context) error {
@@ -137,11 +150,8 @@ func runServer(cmd *cobra.Command, args []string) error {
 	}
 
 	// Create servers
-	healthAddr := viper.GetString("health-addr")
-	healthServer := health.NewServer(healthAddr, healthChecker, log)
-
-	pprofAddr := viper.GetString("pprof-addr")
-	pprofServer := pprof.NewServer(pprofAddr, log)
+	healthServer := health.NewServer(cfg.HealthAddr, healthChecker, log)
+	pprofServer := pprof.NewServer(cfg.PprofAddr, log)
 
 	// Start servers concurrently
 	var wg sync.WaitGroup
@@ -179,8 +189,8 @@ func runServer(cmd *cobra.Command, args []string) error {
 	shutdownMgr.AddHook(shutdown.ContextCancelHook(cancel, "main-context"))
 
 	log.Info().
-		Str("health_addr", healthAddr).
-		Str("pprof_addr", pprofAddr).
+		Str("health_addr", cfg.HealthAddr).
+		Str("pprof_addr", cfg.PprofAddr).
 		Msg("All servers started successfully")
 
 	// Wait for shutdown signal or server errors

@@ -1,5 +1,10 @@
-package telemetry 
+package telemetry
 
+import (
+	"fmt"
+
+	"go.opentelemetry.io/otel/metric"
+)
 
 // DatabaseMetrics provides database-specific metrics
 type DatabaseMetrics struct {
