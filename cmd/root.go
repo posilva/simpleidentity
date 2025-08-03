@@ -70,13 +70,13 @@ func init() {
 func initConfig() {
 	// Initialize global configuration manager
 	configMgr := config.InitGlobal()
-	
+
 	// Enable automatic environment variable binding
 	viper.AutomaticEnv()
 	viper.SetEnvPrefix("SMPIDT")
 	viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
 	viper.BindPFlags(rootCmd.PersistentFlags())
-	
+
 	// Set defaults through the config manager
 	configMgr.SetDefaults()
 }

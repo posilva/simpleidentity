@@ -17,10 +17,6 @@ import (
 	"github.com/posilva/simpleidentity/internal/core/ports"
 )
 
-// NOTE PMS: we could use the Table PK and SK to store the connection betwee the account and the provider
-// still need to assess the pros and cons of this approach, but it seems to be a good fit for our use case
-// for now we will use a GSI to store the connection between the account and the provider as it works
-
 // Constants for DynamoDB table and index names
 const (
 	TablePKName                = "PK"

@@ -42,7 +42,7 @@ func checkHealth(addr string, timeout time.Duration) error {
 	}
 
 	url := fmt.Sprintf("http://%s/health", addr)
-	
+
 	resp, err := client.Get(url)
 	if err != nil {
 		return fmt.Errorf("health check failed: %w", err)

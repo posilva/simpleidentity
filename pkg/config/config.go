@@ -19,28 +19,6 @@ type Config struct {
 	HttpAddr        string        `mapstructure:"http-addr"`
 	ShutdownTimeout time.Duration `mapstructure:"shutdown-timeout"`
 	Version         string        `mapstructure:"version"`
-
-	// Telemetry configuration
-	TelemetryEnabled     bool   `mapstructure:"telemetry-enabled"`
-	TelemetryEnvironment string `mapstructure:"telemetry-environment"`
-
-	// Tracing configuration
-	TracingEnabled    bool    `mapstructure:"tracing-enabled"`
-	TracingEndpoint   string  `mapstructure:"tracing-endpoint"`
-	TracingProtocol   string  `mapstructure:"tracing-protocol"`
-	TracingSampler    string  `mapstructure:"tracing-sampler"`
-	TracingSampleRate float64 `mapstructure:"tracing-sample-rate"`
-
-	// Metrics configuration
-	MetricsEnabled  bool          `mapstructure:"metrics-enabled"`
-	MetricsEndpoint string        `mapstructure:"metrics-endpoint"`
-	MetricsProtocol string        `mapstructure:"metrics-protocol"`
-	MetricsInterval time.Duration `mapstructure:"metrics-interval"`
-
-	// OTLP configuration
-	OtlpInsecure    bool          `mapstructure:"otlp-insecure"`
-	OtlpTimeout     time.Duration `mapstructure:"otlp-timeout"`
-	OtlpCompression string        `mapstructure:"otlp-compression"`
 }
 
 // Manager handles configuration loading and management
@@ -51,12 +29,12 @@ type Manager struct {
 // NewManager creates a new configuration manager
 func NewManager() *Manager {
 	v := viper.New()
-	
+
 	// Set up environment variable handling
 	v.AutomaticEnv()
 	v.SetEnvPrefix("SMPIDT")
 	v.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
-	
+
 	return &Manager{viper: v}
 }
 
@@ -71,44 +49,22 @@ func (m *Manager) SetDefaults() {
 	m.viper.SetDefault("http-addr", ":8090")
 	m.viper.SetDefault("shutdown-timeout", 30*time.Second)
 	m.viper.SetDefault("version", "dev")
-
-	// Telemetry defaults
-	m.viper.SetDefault("telemetry-enabled", false)
-	m.viper.SetDefault("telemetry-environment", "development")
-
-	// Tracing defaults
-	m.viper.SetDefault("tracing-enabled", false)
-	m.viper.SetDefault("tracing-endpoint", "localhost:4318")
-	m.viper.SetDefault("tracing-protocol", "http")
-	m.viper.SetDefault("tracing-sampler", "always")
-	m.viper.SetDefault("tracing-sample-rate", 1.0)
-
-	// Metrics defaults
-	m.viper.SetDefault("metrics-enabled", false)
-	m.viper.SetDefault("metrics-endpoint", "localhost:4318")
-	m.viper.SetDefault("metrics-protocol", "http")
-	m.viper.SetDefault("metrics-interval", 30*time.Second)
-
-	// OTLP defaults
-	m.viper.SetDefault("otlp-insecure", true)
-	m.viper.SetDefault("otlp-timeout", 10*time.Second)
-	m.viper.SetDefault("otlp-compression", "gzip")
 }
 
 // Load loads configuration from environment variables and defaults
 func (m *Manager) Load() (*Config, error) {
 	m.SetDefaults()
-	
+
 	var config Config
 	if err := m.viper.Unmarshal(&config); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal configuration: %w", err)
 	}
-	
+
 	// Validate configuration
 	if err := m.validate(&config); err != nil {
 		return nil, fmt.Errorf("configuration validation failed: %w", err)
 	}
-	
+
 	return &config, nil
 }
 
@@ -132,41 +88,9 @@ func (m *Manager) validate(config *Config) error {
 		return fmt.Errorf("invalid log level: %s, must be one of: %v", config.LogLevel, validLogLevels)
 	}
 
-	// Validate telemetry protocols
-	if config.TracingEnabled {
-		validProtocols := []string{"http", "grpc"}
-		if !contains(validProtocols, config.TracingProtocol) {
-			return fmt.Errorf("invalid tracing protocol: %s, must be one of: %v", config.TracingProtocol, validProtocols)
-		}
-
-		validSamplers := []string{"always", "never", "ratio"}
-		if !contains(validSamplers, config.TracingSampler) {
-			return fmt.Errorf("invalid tracing sampler: %s, must be one of: %v", config.TracingSampler, validSamplers)
-		}
-
-		if config.TracingSampleRate < 0.0 || config.TracingSampleRate > 1.0 {
-			return fmt.Errorf("invalid tracing sample rate: %f, must be between 0.0 and 1.0", config.TracingSampleRate)
-		}
-	}
-
-	if config.MetricsEnabled {
-		validProtocols := []string{"http", "grpc"}
-		if !contains(validProtocols, config.MetricsProtocol) {
-			return fmt.Errorf("invalid metrics protocol: %s, must be one of: %v", config.MetricsProtocol, validProtocols)
-		}
-	}
-
 	// Validate timeouts
 	if config.ShutdownTimeout <= 0 {
 		return fmt.Errorf("shutdown timeout must be positive, got: %v", config.ShutdownTimeout)
-	}
-
-	if config.OtlpTimeout <= 0 {
-		return fmt.Errorf("OTLP timeout must be positive, got: %v", config.OtlpTimeout)
-	}
-
-	if config.MetricsInterval <= 0 {
-		return fmt.Errorf("metrics interval must be positive, got: %v", config.MetricsInterval)
 	}
 
 	return nil
@@ -220,7 +144,7 @@ func (m *Manager) AllSettings() map[string]interface{} {
 // PrintConfig prints the current configuration (for debugging)
 func (m *Manager) PrintConfig(config *Config) map[string]interface{} {
 	settings := make(map[string]interface{})
-	
+
 	// Server settings
 	settings["server"] = map[string]interface{}{
 		"log_level":        config.LogLevel,
@@ -232,37 +156,6 @@ func (m *Manager) PrintConfig(config *Config) map[string]interface{} {
 		"shutdown_timeout": config.ShutdownTimeout,
 		"version":          config.Version,
 	}
-	
-	// Telemetry settings
-	settings["telemetry"] = map[string]interface{}{
-		"enabled":     config.TelemetryEnabled,
-		"environment": config.TelemetryEnvironment,
-	}
-	
-	// Tracing settings
-	settings["tracing"] = map[string]interface{}{
-		"enabled":     config.TracingEnabled,
-		"endpoint":    config.TracingEndpoint,
-		"protocol":    config.TracingProtocol,
-		"sampler":     config.TracingSampler,
-		"sample_rate": config.TracingSampleRate,
-	}
-	
-	// Metrics settings
-	settings["metrics"] = map[string]interface{}{
-		"enabled":  config.MetricsEnabled,
-		"endpoint": config.MetricsEndpoint,
-		"protocol": config.MetricsProtocol,
-		"interval": config.MetricsInterval,
-	}
-	
-	// OTLP settings
-	settings["otlp"] = map[string]interface{}{
-		"insecure":    config.OtlpInsecure,
-		"timeout":     config.OtlpTimeout,
-		"compression": config.OtlpCompression,
-	}
-	
 	return settings
 }
 

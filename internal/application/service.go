@@ -2,8 +2,8 @@ package application
 
 // Package application provides the main service logic for the Simple Identity service.
 type Config struct {
-
 }
+
 // Service represents the application service
 type Service struct {
 }
@@ -12,4 +12,3 @@ type Service struct {
 func New(config Config) *Service {
 	return &Service{}
 }
-
