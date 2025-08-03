@@ -12,9 +12,9 @@ import (
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/expression"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
-	"github.com/posilva/account-service/internal/adapters/output/idgen"
-	"github.com/posilva/account-service/internal/core/domain"
-	"github.com/posilva/account-service/internal/core/ports"
+	"github.com/posilva/simpleidentity/internal/adapters/output/idgen"
+	"github.com/posilva/simpleidentity/internal/core/domain"
+	"github.com/posilva/simpleidentity/internal/core/ports"
 )
 
 // NOTE PMS: we could use the Table PK and SK to store the connection betwee the account and the provider

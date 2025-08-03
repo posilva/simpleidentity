@@ -1,7 +1,7 @@
 package idgen
 
 import (
-	"github.com/posilva/account-service/internal/core/ports"
+	"github.com/posilva/simpleidentity/internal/core/ports"
 	"github.com/segmentio/ksuid"
 )
 

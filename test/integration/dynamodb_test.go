@@ -6,9 +6,9 @@ import (
 	"os"
 	"testing"
 
-	"github.com/posilva/account-service/internal/adapters/output/idgen"
-	"github.com/posilva/account-service/internal/adapters/output/repository"
-	"github.com/posilva/account-service/internal/core/domain"
+	"github.com/posilva/simpleidentity/internal/adapters/output/idgen"
+	"github.com/posilva/simpleidentity/internal/adapters/output/repository"
+	"github.com/posilva/simpleidentity/internal/core/domain"
 	"github.com/stretchr/testify/require"
 )
 

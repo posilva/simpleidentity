@@ -2,8 +2,8 @@
 package providers
 
 import (
-	"github.com/posilva/account-service/internal/core/domain"
-	"github.com/posilva/account-service/internal/core/ports"
+	"github.com/posilva/simpleidentity/internal/core/domain"
+	"github.com/posilva/simpleidentity/internal/core/ports"
 )
 
 type defaultFactory struct {

@@ -7,9 +7,9 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	"github.com/ovechkin-dm/mockio/v2/mock"
-	"github.com/posilva/account-service/internal/adapters/output/idgen"
-	"github.com/posilva/account-service/internal/core/domain"
-	"github.com/posilva/account-service/internal/core/ports"
+	"github.com/posilva/simpleidentity/internal/adapters/output/idgen"
+	"github.com/posilva/simpleidentity/internal/core/domain"
+	"github.com/posilva/simpleidentity/internal/core/ports"
 	"github.com/stretchr/testify/require"
 )
 

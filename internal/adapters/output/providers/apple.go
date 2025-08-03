@@ -14,8 +14,8 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/posilva/account-service/internal/adapters/output/providers/certs"
-	"github.com/posilva/account-service/internal/core/ports"
+	"github.com/posilva/simpleidentity/internal/adapters/output/providers/certs"
+	"github.com/posilva/simpleidentity/internal/core/ports"
 )
 
 // References:

@@ -3,7 +3,7 @@ package providers
 import (
 	"context"
 
-	"github.com/posilva/account-service/internal/core/ports"
+	"github.com/posilva/simpleidentity/internal/core/ports"
 )
 
 type GuestProvider struct{}

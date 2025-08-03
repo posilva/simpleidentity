@@ -5,8 +5,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/posilva/account-service/internal/core/domain"
-	"github.com/posilva/account-service/internal/core/ports"
+	"github.com/posilva/simpleidentity/internal/core/domain"
+	"github.com/posilva/simpleidentity/internal/core/ports"
 )
 
 // AuthService is the implementation of the AuthService interface.

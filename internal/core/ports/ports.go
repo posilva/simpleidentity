@@ -4,7 +4,7 @@ package ports
 import (
 	"context"
 
-	"github.com/posilva/account-service/internal/core/domain"
+	"github.com/posilva/simpleidentity/internal/core/domain"
 )
 
 // AuthService defines the interface for authentication services.
