@@ -1,0 +1,97 @@
+# Docker ignore file for SimpleIdentity
+# Optimizes build context and improves security
+
+# Git and version control
+.git
+.gitignore
+.gitattributes
+.github/
+
+# Documentation and markdown files
+*.md
+docs/
+documentation/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Build artifacts
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+simpleidentity
+bin/
+dist/
+
+# Test files and coverage
+*_test.go
+test/
+coverage.out
+*.test
+*.prof
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.log
+
+# Dependencies (will be downloaded in container)
+vendor/
+
+# Configuration files (should be provided via environment)
+*.env
+.env*
+config.yaml
+config.json
+*.key
+*.pem
+*.cert
+
+# Kubernetes and deployment files
+deployments/
+k8s/
+*.yaml
+*.yml
+
+# CI/CD files
+Jenkinsfile
+.circleci/
+.travis.yml
+.gitlab-ci.yml
+
+# Node modules (if any frontend assets)
+node_modules/
+npm-debug.log*
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+
+# Logs
+logs
+*.log
+
+# Docker files (except the one we're using)
+docker-compose*.yml
+Dockerfile.*

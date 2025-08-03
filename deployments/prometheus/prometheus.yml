@@ -1,0 +1,43 @@
+# Prometheus Configuration for SimpleIdentity Service
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+# Rules for alerting (can be extended)
+rule_files:
+  # - "alert_rules.yml"
+
+# Scrape configurations
+scrape_configs:
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # SimpleIdentity service health endpoint
+  - job_name: 'simpleidentity-health'
+    static_configs:
+      - targets: ['simpleidentity:8080']
+    metrics_path: '/health'
+    scrape_interval: 30s
+
+  # OpenTelemetry Collector metrics (from SimpleIdentity)
+  - job_name: 'simpleidentity-metrics'
+    static_configs:
+      - targets: ['otel-collector:8889']
+    scrape_interval: 15s
+
+  # OpenTelemetry Collector self-monitoring
+  - job_name: 'otel-collector'
+    static_configs:
+      - targets: ['otel-collector:8888']
+    scrape_interval: 30s
+
+  # SimpleIdentity pprof metrics (development only)
+  - job_name: 'simpleidentity-pprof'
+    static_configs:
+      - targets: ['simpleidentity:6060']
+    metrics_path: '/debug/pprof/heap'
+    scrape_interval: 60s
+
+# OpenTelemetry metrics will be received via OTLP and exposed by the collector

@@ -1,0 +1,73 @@
+# OpenTelemetry Collector Configuration
+# Receives metrics and traces from SimpleIdentity and forwards them to appropriate backends
+
+receivers:
+  # OTLP receiver for both metrics and traces
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  # Basic batch processor for better performance
+  batch:
+    timeout: 1s
+    send_batch_size: 1024
+    send_batch_max_size: 2048
+
+  # Memory limiter to prevent OOM
+  memory_limiter:
+    limit_mib: 256
+    check_interval: 1s
+
+  # Resource processor to add service information
+  resource:
+    attributes:
+      - key: service.namespace
+        value: simpleidentity
+        action: upsert
+      - key: deployment.environment
+        value: development
+        action: upsert
+
+exporters:
+  # OTLP exporter for traces to Jaeger
+  otlp/jaeger:
+    endpoint: jaeger:4317
+    tls:
+      insecure: true
+
+  # Prometheus exporter for metrics
+  prometheus:
+    endpoint: "0.0.0.0:8889"
+    namespace: simpleidentity
+    const_labels:
+      environment: development
+
+  # Logging exporter for debugging
+  logging:
+    loglevel: info
+
+service:
+  telemetry:
+    logs:
+      level: info
+    metrics:
+      address: 0.0.0.0:8888
+
+  pipelines:
+    # Traces pipeline: OTLP -> Jaeger
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, resource, batch]
+      exporters: [otlp/jaeger, logging]
+
+    # Metrics pipeline: OTLP -> Prometheus
+    metrics:
+      receivers: [otlp]
+      processors: [memory_limiter, resource, batch]
+      exporters: [prometheus, logging]
+
+  extensions: []
