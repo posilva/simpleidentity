@@ -90,6 +90,33 @@ env-example: ## Show environment variable examples
 	@echo "export SMPIDT_GRPC_ADDR=:9090"
 	@echo "export SMPIDT_HTTP_ADDR=:8090"
 	@echo "export SMPIDT_SHUTDOWN_TIMEOUT=30s"
+	@echo ""
+	@echo "OpenTelemetry examples:"
+	@echo "export SMPIDT_TELEMETRY_ENABLED=true"
+	@echo "export SMPIDT_TRACING_ENABLED=true"
+	@echo "export SMPIDT_METRICS_ENABLED=true"
+	@echo "export SMPIDT_TRACING_ENDPOINT=localhost:4317"
+	@echo "export SMPIDT_TRACING_PROTOCOL=grpc"
+	@echo "export SMPIDT_METRICS_ENDPOINT=localhost:4318"
+	@echo "export SMPIDT_TELEMETRY_ENVIRONMENT=production"
+
+# Telemetry targets
+run-with-telemetry: ## Run with telemetry enabled
+	$(GORUN) ./cmd/simpleidentity server --log-pretty --telemetry-enabled --tracing-enabled --metrics-enabled
+
+run-jaeger: ## Run with Jaeger tracing (requires Jaeger running)
+	$(GORUN) ./cmd/simpleidentity server --log-pretty --telemetry-enabled --tracing-enabled --tracing-endpoint localhost:14250 --tracing-protocol grpc
+
+start-jaeger: ## Start Jaeger all-in-one container
+	docker run -d --name jaeger \
+		-p 16686:16686 \
+		-p 14250:14250 \
+		jaegertracing/all-in-one:latest
+	@echo "Jaeger UI available at http://localhost:16686"
+
+stop-jaeger: ## Stop and remove Jaeger container
+	docker stop jaeger || true
+	docker rm jaeger || true
 
 # Quick start
 start: deps build run ## Quick start: install deps, build, and run
