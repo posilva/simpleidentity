@@ -42,5 +42,26 @@ func TestDynamoDBAccountsRepository_ResolveIDByProvider_ReturnsAccountID(t *test
 	accountID, err := repo.ResolveIDByProvider(ctx, providerType, providerID)
 
 	require.NoError(t, err)
-	require.NotEmpty(t, accountID)
+	require.NotEqual(t, accountID, domain.EmptyAccountID)
+}
+
+func TestDynamoDBAccountsRepository_CreateIdentity_ReturnsAccountID(t *testing.T) {
+	ctx := context.Background()
+	providerType := domain.ProviderTypeGuest
+	providerID := "test_provider_id"
+	aid := idgen.NewKSUIDGenerator().GenerateID()
+	tableName := "accounts_test"
+
+	ctrl := mock.NewMockController(t)
+
+	clientMock := mock.Mock[DynamoDBAPI](ctrl)
+	idGeneratorMock := mock.Mock[ports.IDGenerator](ctrl)
+
+	mock.WhenSingle(idGeneratorMock.GenerateID()).ThenReturn(aid)
+
+	repo := NewDynamoDBAccountsRepositoryWithIDGenerator(clientMock, tableName, idGeneratorMock)
+	accountID, err := repo.Create(ctx, providerType, providerID)
+
+	require.NotEqual(t, accountID, domain.EmptyAccountID)
+	require.NoError(t, err)
 }

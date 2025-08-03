@@ -14,6 +14,7 @@ require (
 	github.com/segmentio/ksuid v1.0.4
 	github.com/stretchr/testify v1.10.0
 	github.com/testcontainers/testcontainers-go v0.38.0
+	gopkg.in/square/go-jose.v2 v2.6.0
 )
 
 require (

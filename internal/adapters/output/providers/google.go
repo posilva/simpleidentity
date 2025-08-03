@@ -33,7 +33,7 @@ const (
 	GoogleAuthCodeFieldName = "token"
 )
 
-type idTokenClaims struct {
+type googleIDTokenClaims struct {
 	Issuer   string `json:"iss"`
 	Subject  string `json:"sub"`
 	Audience string `json:"aud"`
@@ -51,21 +51,21 @@ type tokenResponse struct {
 	IDToken      string `json:"id_token"`
 }
 
-// GoogleCredentialsProvider defines the interface to get the needed Google Credentials
-type GoogleCredentialsProvider interface {
-	GetClientID() string
-	GetClientSecret() string
-	GetPrivateKey() string
-	GetAuthURI() string
-	GetCertsURL() string
-	GetIDExpectedIssuer() string
-	GetIDExpectedAud() string
+// GoogleCredentials defines the interface to get the needed Google Credentials
+type GoogleCredentials struct {
+	ClientID              string
+	ClientSecret          string
+	PrivateKey            string
+	AuthURI               string
+	CertsURL              string
+	IDTokenExpectedIssuer string
+	IDTokenExpectedAud    string
 }
 
 type googleProvider struct {
-	requestTimeout      time.Duration
-	credentialsProvider GoogleCredentialsProvider
-	cacheManager        certs.CacheManager
+	requestTimeout time.Duration
+	credentials    GoogleCredentials
+	cacheManager   certs.CacheManager
 }
 
 type googleAuthResult struct {
@@ -92,11 +92,11 @@ func (r *googleAuthResult) GetID() string {
 
 // NewGoogleProvider creates a new GoogleProvider
 // serviceAccount is a placeholder for the Google service account credentials in json format.
-func NewGoogleProvider(credentialsProvider GoogleCredentialsProvider, opts ...GoogleProviderOption) ports.AuthProvider {
+func NewGoogleProvider(credentials GoogleCredentials, opts ...GoogleProviderOption) ports.AuthProvider {
 	svc := &googleProvider{
-		requestTimeout:      defaultTimeout,
-		credentialsProvider: credentialsProvider,
-		cacheManager:        certs.NewGoogleCacheManager(),
+		requestTimeout: defaultTimeout,
+		credentials:    credentials,
+		cacheManager:   certs.NewSimpleCacheManager(),
 	}
 	for _, opt := range opts {
 		opt(svc)
@@ -126,13 +126,13 @@ func (p *googleProvider) Authenticate(ctx context.Context, data map[string]strin
 func (p *googleProvider) exchangeAuthCode(authCode string) (*tokenResponse, error) {
 	form := url.Values{}
 	form.Add("code", authCode)
-	form.Add("client_id", p.credentialsProvider.GetClientID())
-	form.Add("client_secret", p.credentialsProvider.GetClientSecret())
+	form.Add("client_id", p.credentials.ClientID)
+	form.Add("client_secret", p.credentials.ClientSecret)
 	form.Add("redirect_uri", "") // this is mobile we can keep empty
 	form.Add("grant_type", "authorization_code")
 
 	// TODO: PMS replace by a more robust http client setup using the configured timeout
-	resp, err := http.PostForm(p.credentialsProvider.GetAuthURI(), form)
+	resp, err := http.PostForm(p.credentials.AuthURI, form)
 	if err != nil {
 		return nil, fmt.Errorf("failed to post to token endpoint: %w", err)
 	}
@@ -158,7 +158,7 @@ func (p *googleProvider) exchangeAuthCode(authCode string) (*tokenResponse, erro
 func (p *googleProvider) fetchPublicKeyByID(id string) (*rsa.PublicKey, error) {
 	key := p.cacheManager.Get(id)
 	if key == nil {
-		resp, err := http.Get(p.credentialsProvider.GetCertsURL())
+		resp, err := http.Get(p.credentials.CertsURL)
 		if err != nil {
 			return nil, err
 		}
@@ -195,8 +195,8 @@ func (p *googleProvider) fetchPublicKeyByID(id string) (*rsa.PublicKey, error) {
 	return key, nil
 }
 
-func (p *googleProvider) verifyIDToken(idToken string) (*idTokenClaims, error) {
-	token, err := jwt.ParseWithClaims(idToken, &idTokenClaims{}, func(token *jwt.Token) (interface{}, error) {
+func (p *googleProvider) verifyIDToken(idToken string) (*googleIDTokenClaims, error) {
+	token, err := jwt.ParseWithClaims(idToken, &googleIDTokenClaims{}, func(token *jwt.Token) (any, error) {
 		kid, ok := token.Header["kid"].(string)
 		if !ok {
 			return nil, errors.New("no kid found in token header")
@@ -217,15 +217,15 @@ func (p *googleProvider) verifyIDToken(idToken string) (*idTokenClaims, error) {
 		return nil, errors.New("invalid token")
 	}
 
-	claims, ok := token.Claims.(*idTokenClaims)
+	claims, ok := token.Claims.(*googleIDTokenClaims)
 	if !ok {
 		return nil, errors.New("invalid claims format")
 	}
 
-	if claims.Issuer != p.credentialsProvider.GetIDExpectedIssuer() {
+	if claims.Issuer != p.credentials.IDTokenExpectedIssuer {
 		return nil, errors.New("invalid issuer")
 	}
-	if claims.Audience != p.credentialsProvider.GetIDExpectedAud() {
+	if claims.Audience != p.credentials.IDTokenExpectedAud {
 		return nil, errors.New("invalid audience")
 	}
 
