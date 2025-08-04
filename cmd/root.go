@@ -25,22 +25,6 @@ and authorization services that support multiple identity providers including:
 • Google OAuth for cross-platform access
 • Extensible provider architecture for future integrations
 
-Features:
-- High-performance gRPC and HTTP APIs
-- JWT-based secure token management
-- DynamoDB backend for scalable data persistence
-- Comprehensive audit logging and metrics
-- Kubernetes-ready containerized deployment
-- OIDC compliance for enterprise integration
-- 12-factor app compliant with environment-based configuration
-
-Perfect for game studios requiring reliable player identity management with the flexibility
-to scale from indie games to AAA multiplayer experiences.
-
-Example usage:
-  simpleidentity server
-  simpleidentity version
-  simpleidentity health
 
 Environment Variables:
   All command-line flags can be set via environment variables with SMPIDT_ prefix.
